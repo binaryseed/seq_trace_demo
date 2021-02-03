@@ -26,6 +26,7 @@ defmodule SeqTraceDemoTest do
     plug(:dispatch)
 
     get "/trace" do
+      # This would be done by the instrumentation (ex: in a telemetry handler)
       Context.set_context()
 
       ctx1 =
@@ -37,6 +38,8 @@ defmodule SeqTraceDemoTest do
         end)
         |> Task.await()
 
+      # Say we want to get the context to generate outgoing HTTP
+      # headers that will propagate the context
       ctx2 = Context.get_context()
 
       response = Jason.encode!(%{ctx1: ctx1, ctx2: ctx2})
@@ -58,12 +61,13 @@ defmodule SeqTraceDemoTest do
         end)
         |> Task.await()
 
-      # This message comes in without a seq_trace token
+      # This message comes in _without_ a seq_trace token
       # It clears the the token which breaks the trace
       receive do
         :msg_from_the_outside -> :ok
       end
 
+      # Now when we try to get the context, nothing is there
       ctx2 = Context.get_context()
 
       response = Jason.encode!(%{ctx1: ctx1, ctx2: ctx2})
