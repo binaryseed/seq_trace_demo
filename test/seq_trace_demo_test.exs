@@ -29,7 +29,7 @@ defmodule SeqTraceDemoTest do
       # This would be done by the instrumentation (ex: in a telemetry handler)
       Context.set_context()
 
-      ctx1 =
+      trace_id_1 =
         Task.async(fn ->
           Task.async(fn ->
             Context.get_context()
@@ -40,9 +40,9 @@ defmodule SeqTraceDemoTest do
 
       # Say we want to get the context to generate outgoing HTTP
       # headers that will propagate the context
-      ctx2 = Context.get_context()
+      trace_id_2 = Context.get_context()
 
-      response = Jason.encode!(%{ctx1: ctx1, ctx2: ctx2})
+      response = Jason.encode!(%{trace_id_1: trace_id_1, trace_id_2: trace_id_2})
       Context.clear_context()
       send_resp(conn, 200, response)
     end
@@ -52,7 +52,7 @@ defmodule SeqTraceDemoTest do
 
       Context.set_context()
 
-      ctx1 =
+      trace_id_1 =
         Task.async(fn ->
           Task.async(fn ->
             Context.get_context()
@@ -68,9 +68,9 @@ defmodule SeqTraceDemoTest do
       end
 
       # Now when we try to get the context, nothing is there
-      ctx2 = Context.get_context()
+      trace_id_2 = Context.get_context()
 
-      response = Jason.encode!(%{ctx1: ctx1, ctx2: ctx2})
+      response = Jason.encode!(%{trace_id_1: trace_id_1, trace_id_2: trace_id_2})
       Context.clear_context()
       send_resp(conn, 200, response)
     end
@@ -84,17 +84,17 @@ defmodule SeqTraceDemoTest do
   test "Cross process Trace ID propigation" do
     {:ok, {_, _, body}} = :httpc.request('http://localhost:7777/trace')
 
-    %{"ctx1" => ctx1, "ctx2" => ctx2} = Jason.decode!(to_string(body))
+    %{"trace_id_1" => trace_id_1, "trace_id_2" => trace_id_2} = Jason.decode!(to_string(body))
 
-    assert ctx1 == ctx2
+    assert trace_id_1 == trace_id_2
   end
 
   test "Broken by a stray receive" do
     {:ok, {_, _, body}} = :httpc.request('http://localhost:7777/trace/broken')
 
-    %{"ctx1" => ctx1, "ctx2" => ctx2} = Jason.decode!(to_string(body))
+    %{"trace_id_1" => trace_id_1, "trace_id_2" => trace_id_2} = Jason.decode!(to_string(body))
 
-    # ctx2 will always be nil
-    assert ctx1 == ctx2
+    # trace_id_2 will always be nil
+    assert trace_id_1 == trace_id_2
   end
 end
